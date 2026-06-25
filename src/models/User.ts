@@ -13,6 +13,22 @@ const userSchema = new Schema(
       enum: ['beginner', 'advanced'],
       default: 'beginner',
     },
+    /**
+     * Spotify integration (PLAN.md §5.12a). Tokens are encrypted at rest
+     * (see lib/crypto.ts) and never returned to the client; the browser gets a
+     * short-lived access token from the /integrations/spotify/token route.
+     */
+    spotify: {
+      connected: { type: Boolean, default: false },
+      accessToken: { type: String }, // encrypted
+      refreshToken: { type: String }, // encrypted
+      expiresAt: { type: Date },
+      scope: { type: String },
+      productTier: { type: String }, // 'premium' | 'free' | 'open' | 'unknown'
+      spotifyUserId: { type: String },
+      displayName: { type: String },
+      connectedAt: { type: Date },
+    },
   },
   { timestamps: true },
 );

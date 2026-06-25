@@ -26,6 +26,16 @@ export const env = {
     name: process.env.RP_NAME ?? 'MythBindr',
     origin: process.env.RP_ORIGIN ?? 'http://localhost:5173',
   },
+  // Spotify OAuth (see docs/spotify-setup.md). Optional: the server boots without
+  // it; the integration routes return 503 until clientId/secret are set.
+  spotify: {
+    clientId: process.env.SPOTIFY_CLIENT_ID ?? '',
+    clientSecret: process.env.SPOTIFY_CLIENT_SECRET ?? '',
+    redirectUri:
+      process.env.SPOTIFY_REDIRECT_URI ??
+      'http://127.0.0.1:4000/api/integrations/spotify/callback',
+    configured: Boolean(process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET),
+  },
 } as const;
 
 export type Env = typeof env;
