@@ -5,6 +5,7 @@ import { asyncHandler } from '../auth/middleware';
 import { requireCampaignAccess } from '../campaigns/access';
 import { elementRegistry, type ElementType } from '../schemas/elements';
 import { deriveBodyText } from './bodyText';
+import { mentionLinks } from './links';
 
 // mergeParams so `:cid` from the mount path (/api/campaigns/:cid/elements) is visible.
 const router = Router({ mergeParams: true });
@@ -54,6 +55,7 @@ router.post(
       secrets: b.secrets ?? '',
       soundtrack: b.soundtrack ?? null,
       data: b.data ?? {},
+      links: mentionLinks(b.body),
       updatedBy: req.session.userId,
     });
     res.status(201).json({ element: publicElement(el as ElementDoc) });
@@ -100,6 +102,11 @@ router.patch(
     if (b.body !== undefined) {
       $set.body = b.body;
       $set.bodyText = deriveBodyText(b.body);
+      // Recompute mention links; preserve typed relationship links.
+      const keep = (el.links ?? [])
+        .filter((l) => l.source !== 'mention')
+        .map((l) => ({ targetId: l.targetId, relType: l.relType, source: l.source }));
+      $set.links = [...keep, ...mentionLinks(b.body)];
     }
     if (b.tags !== undefined) $set.tags = b.tags;
     if (b.playerVisible !== undefined) $set.playerVisible = b.playerVisible;
@@ -150,6 +157,27 @@ router.post(
       return;
     }
     res.json({ element: publicElement(updated as ElementDoc) });
+  }),
+);
+
+// ── Backlinks ("Linked from") ──────────────────────────────────────────────
+router.get(
+  '/:id/backlinks',
+  requireCampaignAccess('viewer'),
+  asyncHandler(async (req, res) => {
+    const el = await findInCampaign(req.params.id, req.params.cid);
+    if (!el) {
+      res.status(404).json({ error: 'Element not found' });
+      return;
+    }
+    const back = await Element.find({
+      campaignId: req.params.cid,
+      deletedAt: null,
+      'links.targetId': el._id,
+    }).sort({ updatedAt: -1 });
+    res.json({
+      backlinks: back.map((b) => ({ id: String(b._id), type: b.type, name: b.name })),
+    });
   }),
 );
 
