@@ -11,7 +11,7 @@ app and configuring the credentials.
 - **In-app playback requires Spotify Premium** — this is a Spotify rule (the Web Playback
   SDK refuses to stream for free accounts). Free accounts can still browse/search and
   control playback on other devices in a limited way, but the in-app player needs Premium.
-- Credentials live in `server/.env` (never committed). The **Client Secret stays on the
+- Credentials live in `.env` (never committed). The **Client Secret stays on the
   server** — it is never shipped to the browser.
 
 ---
@@ -60,9 +60,9 @@ MythBindr requests these scopes when a GM connects:
 | `user-read-currently-playing` | Show the now-playing track |
 | `playlist-read-private`, `playlist-read-collaborative` | Browse the GM's playlists to assign soundtracks |
 
-## 4. Add credentials to `server/.env`
+## 4. Add credentials to `.env`
 
-Copy the Client ID and Client Secret into `server/.env` (already gitignored):
+Copy the Client ID and Client Secret into `.env` (already gitignored):
 
 ```dotenv
 # ── Spotify integration ─────────────────────────────────
@@ -71,8 +71,8 @@ SPOTIFY_CLIENT_SECRET=your_client_secret_here
 SPOTIFY_REDIRECT_URI=http://127.0.0.1:4000/api/integrations/spotify/callback
 ```
 
-The placeholders are already present in `server/.env` and documented in
-`server/.env.example`. Just paste your real values over the placeholders. **Restart the
+The placeholders are already present in `.env` and documented in
+`.env.example`. Just paste your real values over the placeholders. **Restart the
 server** after editing `.env`.
 
 ## 5. How the flow works (reference)

@@ -1,9 +1,17 @@
 # MythBindr — Backend
 
-Express + TypeScript API for MythBindr (passkey auth, MongoDB, real-time, integrations).
+Express + TypeScript API for MythBindr (passkey auth, MongoDB; real-time + integrations planned).
 
-- **Frontend repo:** [ManliestBen/mythbindr-front](https://github.com/ManliestBen/mythbindr-front)
-- **Product plan:** see `PLAN.md` in the frontend repo.
+MythBindr is split across **two repos that together make up the app** — this is the
+**back end**:
+
+- **Backend (this repo):** Express API — passkey auth, sessions, MongoDB.
+- **Frontend:** [ManliestBen/mythbindr-front](https://github.com/ManliestBen/mythbindr-front) — React + Vite client (passkey UI, theming, app shell).
+- **Product plan & feature catalog:** see [`PLAN.md`](https://github.com/ManliestBen/mythbindr-front/blob/main/PLAN.md) in the frontend repo.
+
+**Auth status:** passkey (WebAuthn) auth is **implemented and working end-to-end** with the
+frontend — usernameless register / login / logout, sessions in MongoDB, first-user-admin
+bootstrap. See [Endpoints](#endpoints).
 
 ## Stack
 
@@ -43,6 +51,8 @@ npm start          # node dist/index.js
 ## Endpoints
 
 - `GET /api/health`
+
+**Passkey auth** — ✅ implemented & working end-to-end with the frontend:
 - `POST /api/auth/register/options` · `POST /api/auth/register/verify`
 - `POST /api/auth/login/options` · `POST /api/auth/login/verify`
 - `POST /api/auth/logout` · `GET /api/auth/me` · `PATCH /api/auth/me`
