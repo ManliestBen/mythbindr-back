@@ -7,6 +7,15 @@ import { Element } from '../models/Element';
 import { Membership, type MembershipRole } from '../models/Membership';
 import { User } from '../models/User';
 import { roleAtLeast } from '../campaigns/access';
+import { applyUpdate, joinRoom, leaveRoom } from './yElement';
+
+/** Normalize socket.io binary payloads (Buffer/ArrayBuffer/typed array) to Uint8Array. */
+function toU8(d: unknown): Uint8Array {
+  if (d instanceof Uint8Array) return d;
+  if (d instanceof ArrayBuffer) return new Uint8Array(d);
+  if (ArrayBuffer.isView(d)) return new Uint8Array(d.buffer, d.byteOffset, d.byteLength);
+  return new Uint8Array(0);
+}
 
 interface SessionReq {
   session?: { userId?: string };
@@ -55,7 +64,37 @@ export function initRealtime(server: HttpServer): Server {
       await emitPresence(room);
     });
 
+    // ── Yjs CRDT co-editing (editor-only) ──────────────────────────────────
+    const yrooms = new Set<string>();
+
+    socket.on('yjs:join', async ({ elementId }: { elementId: string }) => {
+      if (!(await canAccessElement(userId, elementId, 'editor'))) return;
+      await socket.join(`y:${elementId}`);
+      yrooms.add(elementId);
+      const { state, seedFrom } = await joinRoom(elementId, socket.id);
+      socket.emit('yjs:init', { elementId, state, seedFrom });
+    });
+
+    socket.on('yjs:update', ({ elementId, update }: { elementId: string; update: unknown }) => {
+      if (!yrooms.has(elementId)) return;
+      const u = toU8(update);
+      applyUpdate(elementId, u);
+      socket.to(`y:${elementId}`).emit('yjs:update', { elementId, update: u });
+    });
+
+    socket.on('yjs:awareness', ({ elementId, update }: { elementId: string; update: unknown }) => {
+      if (!yrooms.has(elementId)) return;
+      socket.to(`y:${elementId}`).emit('yjs:awareness', { elementId, update: toU8(update) });
+    });
+
+    socket.on('yjs:leave', ({ elementId }: { elementId: string }) => {
+      yrooms.delete(elementId);
+      void socket.leave(`y:${elementId}`);
+      leaveRoom(elementId, socket.id);
+    });
+
     socket.on('disconnect', async () => {
+      for (const elementId of yrooms) leaveRoom(elementId, socket.id);
       const room = socket.data.room as string | undefined;
       if (room) await emitPresence(room);
     });
