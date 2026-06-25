@@ -108,6 +108,28 @@ router.get(
   }),
 );
 
+// ── The GM's playlists (for assigning mood slots) ──────────────────────────
+router.get(
+  '/playlists',
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const result = await getValidAccessToken(String(req.session.userId));
+    if (!result) {
+      return res.status(409).json({ error: 'Spotify not connected' });
+    }
+    const r = await fetch('https://api.spotify.com/v1/me/playlists?limit=50', {
+      headers: { Authorization: `Bearer ${result.accessToken}` },
+    });
+    if (!r.ok) {
+      return res.status(502).json({ error: 'Could not fetch playlists' });
+    }
+    const data = (await r.json()) as { items?: { uri: string; name: string }[] };
+    res.json({
+      playlists: (data.items ?? []).map((p) => ({ uri: p.uri, name: p.name })),
+    });
+  }),
+);
+
 // ── Disconnect ─────────────────────────────────────────────────────────────
 router.post(
   '/disconnect',
