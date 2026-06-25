@@ -1,0 +1,48 @@
+# MythBindr — Backend
+
+Express + TypeScript API for MythBindr (passkey auth, MongoDB, real-time, integrations).
+
+- **Frontend repo:** [ManliestBen/mythbindr-front](https://github.com/ManliestBen/mythbindr-front)
+- **Product plan:** see `PLAN.md` in the frontend repo.
+
+## Stack
+
+- Node + Express + TypeScript, MongoDB via Mongoose
+- Passkeys via [SimpleWebAuthn](https://simplewebauthn.dev/), `express-session` + `connect-mongo`
+- Socket.IO for real-time co-editing (planned)
+
+## Develop
+
+```bash
+npm install
+npm run dev        # tsx watch -> http://localhost:4000
+npm run db:check   # verify the MongoDB connection
+```
+
+Requires a `.env` (copy from `.env.example`). The frontend dev server proxies
+`/api` and `/socket.io` to `http://localhost:4000`.
+
+## Deploy on a Raspberry Pi
+
+```bash
+npm ci
+npm run build      # tsc -> dist/
+npm start          # node dist/index.js
+```
+
+- Node 20+ recommended.
+- Keep it alive with **pm2** (`pm2 start dist/index.js --name mythbindr-back`)
+  or a **systemd** service.
+- Production `.env`: `NODE_ENV=production`, `MONGODB_URI`, `SESSION_SECRET`,
+  `CLIENT_ORIGIN=https://<your-netlify-domain>`, and `RP_ID` / `RP_ORIGIN` set
+  to the **client** domain (where the passkey ceremony runs).
+- Put it behind a reverse proxy (Caddy/Nginx) with TLS, or expose it via the
+  Netlify `/api` proxy. Cross-site session cookies need `SameSite=None; Secure`
+  (already handled when `NODE_ENV=production`).
+
+## Endpoints
+
+- `GET /api/health`
+- `POST /api/auth/register/options` · `POST /api/auth/register/verify`
+- `POST /api/auth/login/options` · `POST /api/auth/login/verify`
+- `POST /api/auth/logout` · `GET /api/auth/me` · `PATCH /api/auth/me`
