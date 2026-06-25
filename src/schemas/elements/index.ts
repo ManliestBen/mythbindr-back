@@ -1,6 +1,9 @@
 import type { ElementType, ElementSchemaSet } from './base';
 import { noteSchemas } from './note';
 import { npcSchemas } from './npc';
+import { locationSchemas } from './location';
+import { itemSchemas } from './item';
+import { encounterSchemas } from './encounter';
 
 export * from './base';
 
@@ -12,4 +15,7 @@ export * from './base';
 export const elementRegistry: Partial<Record<ElementType, ElementSchemaSet>> = {
   note: noteSchemas,
   npc: npcSchemas,
+  location: locationSchemas,
+  item: itemSchemas,
+  encounter: encounterSchemas,
 };
