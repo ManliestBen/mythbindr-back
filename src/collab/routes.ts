@@ -7,6 +7,7 @@ import { requireCampaignAccess } from '../campaigns/access';
 import { Membership } from '../models/Membership';
 import { Invite, type InviteDoc } from '../models/Invite';
 import { Activity } from '../models/Activity';
+import { ShareLink, type ShareLinkDoc } from '../models/ShareLink';
 
 // mergeParams so `:cid` from /api/campaigns/:cid is available.
 const router = Router({ mergeParams: true });
@@ -154,6 +155,56 @@ router.get(
         at: a.createdAt,
       })),
     });
+  }),
+);
+
+// ── Player share links (owner-only) ────────────────────────────────────────
+function publicShareLink(s: ShareLinkDoc) {
+  return {
+    id: String(s._id),
+    token: s.token,
+    url: `${env.clientOrigin}/share/${s.token}`,
+    createdAt: s.createdAt,
+  };
+}
+
+router.post(
+  '/share',
+  requireCampaignAccess('owner'),
+  asyncHandler(async (req, res) => {
+    const link = await ShareLink.create({
+      campaignId: req.params.cid,
+      token: crypto.randomBytes(24).toString('base64url'),
+      createdBy: req.session.userId,
+    });
+    res.status(201).json({ link: publicShareLink(link as ShareLinkDoc) });
+  }),
+);
+
+router.get(
+  '/share',
+  requireCampaignAccess('owner'),
+  asyncHandler(async (req, res) => {
+    const links = await ShareLink.find({ campaignId: req.params.cid, revoked: false }).sort({
+      createdAt: -1,
+    });
+    res.json({ links: links.map((l) => publicShareLink(l as ShareLinkDoc)) });
+  }),
+);
+
+router.delete(
+  '/share/:linkId',
+  requireCampaignAccess('owner'),
+  asyncHandler(async (req, res) => {
+    if (!isValidObjectId(req.params.linkId)) {
+      res.status(404).json({ error: 'Not found' });
+      return;
+    }
+    await ShareLink.findOneAndUpdate(
+      { _id: req.params.linkId, campaignId: req.params.cid },
+      { $set: { revoked: true } },
+    );
+    res.json({ ok: true });
   }),
 );
 

@@ -10,6 +10,7 @@ import campaignRoutes from './campaigns/routes';
 import elementRoutes from './elements/routes';
 import collabRoutes from './collab/routes';
 import inviteRoutes from './invites/routes';
+import shareRoutes from './share/routes';
 
 async function main(): Promise<void> {
   await connectToDatabase();
@@ -38,6 +39,7 @@ async function main(): Promise<void> {
   app.use('/api/campaigns/:cid/elements', elementRoutes);
   app.use('/api/campaigns/:cid', collabRoutes);
   app.use('/api/invites', inviteRoutes);
+  app.use('/api/share', shareRoutes); // public — no auth
 
   const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
     console.error('Unhandled error:', err);
