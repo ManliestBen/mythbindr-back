@@ -1,0 +1,162 @@
+import { Router } from 'express';
+import { isValidObjectId } from 'mongoose';
+import { Element, publicElement, type ElementDoc } from '../models/Element';
+import { asyncHandler } from '../auth/middleware';
+import { requireCampaignAccess } from '../campaigns/access';
+import { elementRegistry, type ElementType } from '../schemas/elements';
+import { deriveBodyText } from './bodyText';
+
+// mergeParams so `:cid` from the mount path (/api/campaigns/:cid/elements) is visible.
+const router = Router({ mergeParams: true });
+
+// ── List (filter by type / tag / name query; optionally include trashed) ───
+router.get(
+  '/',
+  requireCampaignAccess('viewer'),
+  asyncHandler(async (req, res) => {
+    const { type, tag, q, includeDeleted } = req.query as Record<string, string | undefined>;
+    const filter: Record<string, unknown> = { campaignId: req.params.cid };
+    if (!includeDeleted) filter.deletedAt = null;
+    else filter.deletedAt = { $ne: null };
+    if (type) filter.type = type;
+    if (tag) filter.tags = tag;
+    if (q) filter.name = { $regex: q, $options: 'i' };
+    const els = await Element.find(filter).sort({ updatedAt: -1 }).limit(500);
+    res.json({ elements: els.map((e) => publicElement(e as ElementDoc)) });
+  }),
+);
+
+// ── Create ─────────────────────────────────────────────────────────────────
+router.post(
+  '/',
+  requireCampaignAccess('editor'),
+  asyncHandler(async (req, res) => {
+    const type = req.body?.type as ElementType;
+    const schemas = elementRegistry[type];
+    if (!schemas) {
+      res.status(400).json({ error: `Unsupported element type: ${type}` });
+      return;
+    }
+    const parsed = schemas.create.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Validation failed', issues: parsed.error.issues });
+      return;
+    }
+    const b = parsed.data as Record<string, unknown>;
+    const el = await Element.create({
+      campaignId: req.params.cid,
+      type,
+      name: b.name,
+      body: b.body ?? null,
+      bodyText: deriveBodyText(b.body),
+      tags: b.tags ?? [],
+      playerVisible: b.playerVisible ?? false,
+      secrets: b.secrets ?? '',
+      soundtrack: b.soundtrack ?? null,
+      data: b.data ?? {},
+      updatedBy: req.session.userId,
+    });
+    res.status(201).json({ element: publicElement(el as ElementDoc) });
+  }),
+);
+
+// ── Read one ─────────────────────────────────────────────────────────────
+router.get(
+  '/:id',
+  requireCampaignAccess('viewer'),
+  asyncHandler(async (req, res) => {
+    const el = await findInCampaign(req.params.id, req.params.cid);
+    if (!el) {
+      res.status(404).json({ error: 'Element not found' });
+      return;
+    }
+    res.json({ element: publicElement(el as ElementDoc) });
+  }),
+);
+
+// ── Update (type is immutable; validated against the element's own type) ───
+router.patch(
+  '/:id',
+  requireCampaignAccess('editor'),
+  asyncHandler(async (req, res) => {
+    const el = await findInCampaign(req.params.id, req.params.cid);
+    if (!el) {
+      res.status(404).json({ error: 'Element not found' });
+      return;
+    }
+    const schemas = elementRegistry[el.type as ElementType];
+    if (!schemas) {
+      res.status(400).json({ error: `Unsupported element type: ${el.type}` });
+      return;
+    }
+    const parsed = schemas.update.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Validation failed', issues: parsed.error.issues });
+      return;
+    }
+    const b = parsed.data as Record<string, unknown>;
+    const $set: Record<string, unknown> = { updatedBy: req.session.userId };
+    if (b.name !== undefined) $set.name = b.name;
+    if (b.body !== undefined) {
+      $set.body = b.body;
+      $set.bodyText = deriveBodyText(b.body);
+    }
+    if (b.tags !== undefined) $set.tags = b.tags;
+    if (b.playerVisible !== undefined) $set.playerVisible = b.playerVisible;
+    if (b.secrets !== undefined) $set.secrets = b.secrets;
+    if (b.soundtrack !== undefined) $set.soundtrack = b.soundtrack;
+    if (b.data !== undefined) $set.data = b.data; // whole-subdoc replace
+
+    const updated = await Element.findByIdAndUpdate(
+      el._id,
+      { $set, $inc: { version: 1 } },
+      { new: true },
+    );
+    res.json({ element: updated ? publicElement(updated as ElementDoc) : null });
+  }),
+);
+
+// ── Soft-delete to trash ───────────────────────────────────────────────────
+router.delete(
+  '/:id',
+  requireCampaignAccess('editor'),
+  asyncHandler(async (req, res) => {
+    const el = await findInCampaign(req.params.id, req.params.cid);
+    if (!el) {
+      res.status(404).json({ error: 'Element not found' });
+      return;
+    }
+    await Element.findByIdAndUpdate(el._id, { $set: { deletedAt: new Date() } });
+    res.json({ ok: true });
+  }),
+);
+
+// ── Restore from trash ─────────────────────────────────────────────────────
+router.post(
+  '/:id/restore',
+  requireCampaignAccess('editor'),
+  asyncHandler(async (req, res) => {
+    if (!isValidObjectId(req.params.id)) {
+      res.status(404).json({ error: 'Element not found' });
+      return;
+    }
+    const updated = await Element.findOneAndUpdate(
+      { _id: req.params.id, campaignId: req.params.cid },
+      { $set: { deletedAt: null } },
+      { new: true },
+    );
+    if (!updated) {
+      res.status(404).json({ error: 'Element not found' });
+      return;
+    }
+    res.json({ element: publicElement(updated as ElementDoc) });
+  }),
+);
+
+/** Find a live (or trashed) element scoped to a campaign, guarding bad ids. */
+async function findInCampaign(id: string, campaignId: string) {
+  if (!isValidObjectId(id)) return null;
+  return Element.findOne({ _id: id, campaignId });
+}
+
+export default router;
