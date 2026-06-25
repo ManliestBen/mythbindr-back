@@ -73,6 +73,7 @@ export function publicElement(e: ElementDoc) {
     playerVisible: e.playerVisible,
     secrets: e.secrets,
     soundtrack: e.soundtrack,
+    version: e.version,
     deletedAt: e.deletedAt,
     createdAt: e.createdAt,
     updatedAt: e.updatedAt,

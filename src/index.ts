@@ -1,6 +1,8 @@
+import http from 'http';
 import express, { type ErrorRequestHandler } from 'express';
 import cors from 'cors';
 import mongoose from 'mongoose';
+import { initRealtime } from './realtime/io';
 import { env } from './lib/env';
 import { connectToDatabase } from './lib/db';
 import { createSessionMiddleware } from './lib/session';
@@ -47,7 +49,9 @@ async function main(): Promise<void> {
   };
   app.use(errorHandler);
 
-  app.listen(env.port, () => {
+  const server = http.createServer(app);
+  initRealtime(server);
+  server.listen(env.port, () => {
     console.log(`✓ Server listening on http://localhost:${env.port}`);
   });
 }

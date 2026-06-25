@@ -5,6 +5,11 @@ import { Membership, type MembershipRole } from '../models/Membership';
 
 const ROLE_RANK: Record<MembershipRole, number> = { viewer: 0, editor: 1, owner: 2 };
 
+/** True if `role` meets or exceeds `min` in the owner>editor>viewer hierarchy. */
+export function roleAtLeast(role: MembershipRole, min: MembershipRole): boolean {
+  return ROLE_RANK[role] >= ROLE_RANK[min];
+}
+
 /**
  * Authorize the current user against the campaign in `:cid`. Loads the campaign
  * and the user's Membership, enforces a minimum role, and attaches

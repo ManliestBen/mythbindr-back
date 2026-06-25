@@ -95,6 +95,15 @@ router.patch(
       res.status(404).json({ error: 'Element not found' });
       return;
     }
+    // Optimistic concurrency (last-write-wins guard): reject stale edits.
+    const expectedVersion = Number(req.body?.expectedVersion);
+    if (!Number.isNaN(expectedVersion) && el.version !== expectedVersion) {
+      res.status(409).json({
+        error: 'This element was changed by someone else. Reloaded to the latest.',
+        element: publicElement(el as ElementDoc),
+      });
+      return;
+    }
     const schemas = elementRegistry[el.type as ElementType];
     if (!schemas) {
       res.status(400).json({ error: `Unsupported element type: ${el.type}` });
