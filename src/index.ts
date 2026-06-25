@@ -13,6 +13,7 @@ import elementRoutes from './elements/routes';
 import collabRoutes from './collab/routes';
 import inviteRoutes from './invites/routes';
 import shareRoutes from './share/routes';
+import sessionRoutes from './sessions/routes';
 
 async function main(): Promise<void> {
   await connectToDatabase();
@@ -40,6 +41,7 @@ async function main(): Promise<void> {
   app.use('/api/campaigns', campaignRoutes);
   app.use('/api/campaigns/:cid/elements', elementRoutes);
   app.use('/api/campaigns/:cid', collabRoutes);
+  app.use('/api/campaigns/:cid', sessionRoutes);
   app.use('/api/invites', inviteRoutes);
   app.use('/api/share', shareRoutes); // public — no auth
 
