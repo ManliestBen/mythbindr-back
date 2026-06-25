@@ -56,3 +56,11 @@ npm start          # node dist/index.js
 - `POST /api/auth/register/options` · `POST /api/auth/register/verify`
 - `POST /api/auth/login/options` · `POST /api/auth/login/verify`
 - `POST /api/auth/logout` · `GET /api/auth/me` · `PATCH /api/auth/me`
+
+**Spotify integration** (`/api/integrations/spotify`) — ✅ working; **admin-only**
+(OAuth 2.0, tokens encrypted at rest; see [`docs/spotify-setup.md`](docs/spotify-setup.md)):
+- `GET /login` — redirect the GM to Spotify's consent screen (signed `state`)
+- `GET /callback` — OAuth callback: exchanges the code, stores encrypted tokens, records Premium tier
+- `GET /status` — connection + Premium status
+- `GET /token` — short-lived access token for the browser Web Playback SDK
+- `POST /disconnect` — forget the stored Spotify tokens

@@ -17,7 +17,7 @@ const router = Router();
 
 /** Browser landing spot after the OAuth round-trip (Settings → Integrations). */
 const settingsUrl = (query: string): string =>
-  `${env.clientOrigin}/settings/integrations?${query}`;
+  `${env.clientOrigin}/settings?${query}`;
 
 // ── Begin OAuth: redirect the GM to Spotify's authorize page ───────────────
 // Hit as a top-level navigation through the dev proxy, so the session cookie is
