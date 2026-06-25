@@ -1,5 +1,7 @@
 import { Router } from 'express';
+import mongoose from 'mongoose';
 import { Campaign, publicCampaign, type CampaignDoc } from '../models/Campaign';
+import { Element } from '../models/Element';
 import { Membership } from '../models/Membership';
 import { asyncHandler, requireAuth } from '../auth/middleware';
 import { validate } from '../lib/validate';
@@ -112,6 +114,61 @@ router.post(
       role: 'owner',
     });
     res.status(201).json({ campaign: publicCampaign(copy as CampaignDoc) });
+  }),
+);
+
+// ── Dashboard: element counts by type + recent edits + story-so-far ────────
+router.get(
+  '/:cid/dashboard',
+  requireCampaignAccess('viewer'),
+  asyncHandler(async (req, res) => {
+    const cid = req.params.cid;
+    const grouped = await Element.aggregate<{ _id: string; count: number }>([
+      { $match: { campaignId: new mongoose.Types.ObjectId(cid), deletedAt: null } },
+      { $group: { _id: '$type', count: { $sum: 1 } } },
+    ]);
+    const counts: Record<string, number> = {};
+    for (const g of grouped) counts[g._id] = g.count;
+
+    const recent = await Element.find({ campaignId: cid, deletedAt: null })
+      .sort({ updatedAt: -1 })
+      .limit(8)
+      .select('type name updatedAt');
+
+    res.json({
+      counts,
+      recent: recent.map((r) => ({
+        id: String(r._id),
+        type: r.type,
+        name: r.name,
+        updatedAt: r.updatedAt,
+      })),
+      storySoFar: (req.campaign as CampaignDoc).storySoFar,
+    });
+  }),
+);
+
+// ── Global search (text index on name + bodyText; type/tag filters) ────────
+router.get(
+  '/:cid/search',
+  requireCampaignAccess('viewer'),
+  asyncHandler(async (req, res) => {
+    const { q, type, tag } = req.query as Record<string, string | undefined>;
+    const filter: Record<string, unknown> = { campaignId: req.params.cid, deletedAt: null };
+    if (type) filter.type = type;
+    if (tag) filter.tags = tag;
+    if (q) filter.$text = { $search: q };
+
+    const query = Element.find(
+      filter,
+      q ? { score: { $meta: 'textScore' } } : undefined,
+    ).limit(50);
+    query.sort(q ? { score: { $meta: 'textScore' } } : { updatedAt: -1 });
+    const els = await query;
+
+    res.json({
+      results: els.map((e) => ({ id: String(e._id), type: e.type, name: e.name })),
+    });
   }),
 );
 
