@@ -6,6 +6,7 @@ import { requireCampaignAccess } from '../campaigns/access';
 import { elementRegistry, type ElementType } from '../schemas/elements';
 import { deriveBodyText } from './bodyText';
 import { mentionLinks, relationshipLinks } from './links';
+import { logActivity } from '../models/Activity';
 
 // mergeParams so `:cid` from the mount path (/api/campaigns/:cid/elements) is visible.
 const router = Router({ mergeParams: true });
@@ -57,6 +58,14 @@ router.post(
       data: b.data ?? {},
       links: [...relationshipLinks(b.relationships), ...mentionLinks(b.body)],
       updatedBy: req.session.userId,
+    });
+    void logActivity({
+      campaignId: req.params.cid,
+      userId: req.session.userId,
+      action: 'created',
+      elementId: el._id,
+      elementType: el.type,
+      elementName: el.name,
     });
     res.status(201).json({ element: publicElement(el as ElementDoc) });
   }),
@@ -131,6 +140,14 @@ router.patch(
       { $set, $inc: { version: 1 } },
       { new: true },
     );
+    void logActivity({
+      campaignId: req.params.cid,
+      userId: req.session.userId,
+      action: 'updated',
+      elementId: el._id,
+      elementType: el.type,
+      elementName: (updated ?? el).name,
+    });
     res.json({ element: updated ? publicElement(updated as ElementDoc) : null });
   }),
 );
@@ -146,6 +163,14 @@ router.delete(
       return;
     }
     await Element.findByIdAndUpdate(el._id, { $set: { deletedAt: new Date() } });
+    void logActivity({
+      campaignId: req.params.cid,
+      userId: req.session.userId,
+      action: 'deleted',
+      elementId: el._id,
+      elementType: el.type,
+      elementName: el.name,
+    });
     res.json({ ok: true });
   }),
 );
@@ -168,6 +193,14 @@ router.post(
       res.status(404).json({ error: 'Element not found' });
       return;
     }
+    void logActivity({
+      campaignId: req.params.cid,
+      userId: req.session.userId,
+      action: 'restored',
+      elementId: updated._id,
+      elementType: updated.type,
+      elementName: updated.name,
+    });
     res.json({ element: publicElement(updated as ElementDoc) });
   }),
 );

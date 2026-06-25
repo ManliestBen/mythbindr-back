@@ -8,6 +8,8 @@ import authRoutes from './auth/routes';
 import spotifyRoutes from './integrations/spotify/routes';
 import campaignRoutes from './campaigns/routes';
 import elementRoutes from './elements/routes';
+import collabRoutes from './collab/routes';
+import inviteRoutes from './invites/routes';
 
 async function main(): Promise<void> {
   await connectToDatabase();
@@ -34,6 +36,8 @@ async function main(): Promise<void> {
   app.use('/api/integrations/spotify', spotifyRoutes);
   app.use('/api/campaigns', campaignRoutes);
   app.use('/api/campaigns/:cid/elements', elementRoutes);
+  app.use('/api/campaigns/:cid', collabRoutes);
+  app.use('/api/invites', inviteRoutes);
 
   const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
     console.error('Unhandled error:', err);
