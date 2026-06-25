@@ -6,6 +6,7 @@ import { connectToDatabase } from './lib/db';
 import { createSessionMiddleware } from './lib/session';
 import authRoutes from './auth/routes';
 import spotifyRoutes from './integrations/spotify/routes';
+import campaignRoutes from './campaigns/routes';
 
 async function main(): Promise<void> {
   await connectToDatabase();
@@ -30,6 +31,7 @@ async function main(): Promise<void> {
 
   app.use('/api/auth', authRoutes);
   app.use('/api/integrations/spotify', spotifyRoutes);
+  app.use('/api/campaigns', campaignRoutes);
 
   const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
     console.error('Unhandled error:', err);
