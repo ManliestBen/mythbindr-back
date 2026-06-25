@@ -24,3 +24,17 @@ export function mentionLinks(body: unknown) {
     source: 'mention' as const,
   }));
 }
+
+/** Build `links[]` entries (source: 'relationship') from typed form relationships. */
+export function relationshipLinks(rels: unknown) {
+  if (!Array.isArray(rels)) return [];
+  return rels
+    .filter(
+      (r): r is { targetId: string; relType?: string } =>
+        !!r &&
+        typeof r === 'object' &&
+        typeof (r as { targetId?: unknown }).targetId === 'string' &&
+        isValidObjectId((r as { targetId: string }).targetId),
+    )
+    .map((r) => ({ targetId: r.targetId, relType: r.relType ?? '', source: 'relationship' as const }));
+}

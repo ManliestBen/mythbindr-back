@@ -19,6 +19,11 @@ export const baseElementCreate = z.object({
   playerVisible: z.boolean().optional().default(false),
   secrets: z.string().max(20000).optional().default(''),
   soundtrack: soundtrackSchema.optional(),
+  /** Typed relationships to other elements (stored as source: 'relationship' links). */
+  relationships: z
+    .array(z.object({ targetId: z.string(), relType: z.string().max(40).optional().default('') }))
+    .max(100)
+    .optional(),
 });
 
 export interface ElementSchemaSet {

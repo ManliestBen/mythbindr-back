@@ -5,7 +5,7 @@ import { asyncHandler } from '../auth/middleware';
 import { requireCampaignAccess } from '../campaigns/access';
 import { elementRegistry, type ElementType } from '../schemas/elements';
 import { deriveBodyText } from './bodyText';
-import { mentionLinks } from './links';
+import { mentionLinks, relationshipLinks } from './links';
 
 // mergeParams so `:cid` from the mount path (/api/campaigns/:cid/elements) is visible.
 const router = Router({ mergeParams: true });
@@ -55,7 +55,7 @@ router.post(
       secrets: b.secrets ?? '',
       soundtrack: b.soundtrack ?? null,
       data: b.data ?? {},
-      links: mentionLinks(b.body),
+      links: [...relationshipLinks(b.relationships), ...mentionLinks(b.body)],
       updatedBy: req.session.userId,
     });
     res.status(201).json({ element: publicElement(el as ElementDoc) });
@@ -102,11 +102,23 @@ router.patch(
     if (b.body !== undefined) {
       $set.body = b.body;
       $set.bodyText = deriveBodyText(b.body);
-      // Recompute mention links; preserve typed relationship links.
-      const keep = (el.links ?? [])
-        .filter((l) => l.source !== 'mention')
-        .map((l) => ({ targetId: l.targetId, relType: l.relType, source: l.source }));
-      $set.links = [...keep, ...mentionLinks(b.body)];
+    }
+    // Recompute links when body and/or relationships change; preserve the other kind.
+    if (b.body !== undefined || b.relationships !== undefined) {
+      const existing = (el.links ?? []).map((l) => ({
+        targetId: l.targetId,
+        relType: l.relType,
+        source: l.source,
+      }));
+      const mention =
+        b.body !== undefined
+          ? mentionLinks(b.body)
+          : existing.filter((l) => l.source === 'mention');
+      const rel =
+        b.relationships !== undefined
+          ? relationshipLinks(b.relationships)
+          : existing.filter((l) => l.source === 'relationship');
+      $set.links = [...rel, ...mention];
     }
     if (b.tags !== undefined) $set.tags = b.tags;
     if (b.playerVisible !== undefined) $set.playerVisible = b.playerVisible;
