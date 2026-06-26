@@ -8,6 +8,7 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "db:check": "tsx src/scripts/dbCheck.ts",
+    "seed:srd": "tsx src/scripts/seedSrd.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

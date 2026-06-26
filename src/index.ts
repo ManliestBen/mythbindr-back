@@ -14,6 +14,7 @@ import collabRoutes from './collab/routes';
 import inviteRoutes from './invites/routes';
 import shareRoutes from './share/routes';
 import sessionRoutes from './sessions/routes';
+import srdRoutes from './srd/routes';
 
 async function main(): Promise<void> {
   await connectToDatabase();
@@ -43,6 +44,7 @@ async function main(): Promise<void> {
   app.use('/api/campaigns/:cid', collabRoutes);
   app.use('/api/campaigns/:cid', sessionRoutes);
   app.use('/api/invites', inviteRoutes);
+  app.use('/api/srd', srdRoutes);
   app.use('/api/share', shareRoutes); // public — no auth
 
   const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
