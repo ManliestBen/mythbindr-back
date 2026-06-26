@@ -36,6 +36,12 @@ export const env = {
       'http://127.0.0.1:4000/api/integrations/spotify/callback',
     configured: Boolean(process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET),
   },
+  // AI assist (PLAN.md §5.14, admin-only). Optional: routes 503 until configured.
+  anthropic: {
+    apiKey: process.env.ANTHROPIC_API_KEY ?? '',
+    model: process.env.ANTHROPIC_MODEL ?? 'claude-opus-4-8',
+    configured: Boolean(process.env.ANTHROPIC_API_KEY),
+  },
 } as const;
 
 export type Env = typeof env;

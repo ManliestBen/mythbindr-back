@@ -15,6 +15,7 @@ import inviteRoutes from './invites/routes';
 import shareRoutes from './share/routes';
 import sessionRoutes from './sessions/routes';
 import srdRoutes from './srd/routes';
+import { globalAiRoutes, scopedAiRoutes } from './ai/routes';
 
 async function main(): Promise<void> {
   await connectToDatabase();
@@ -43,6 +44,8 @@ async function main(): Promise<void> {
   app.use('/api/campaigns/:cid/elements', elementRoutes);
   app.use('/api/campaigns/:cid', collabRoutes);
   app.use('/api/campaigns/:cid', sessionRoutes);
+  app.use('/api/campaigns/:cid/ai', scopedAiRoutes);
+  app.use('/api/ai', globalAiRoutes);
   app.use('/api/invites', inviteRoutes);
   app.use('/api/srd', srdRoutes);
   app.use('/api/share', shareRoutes); // public — no auth
