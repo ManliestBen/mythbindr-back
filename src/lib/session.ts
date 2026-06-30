@@ -17,8 +17,10 @@ export function createSessionMiddleware() {
     store: MongoStore.create({ client: mongoose.connection.getClient() }),
     cookie: {
       httpOnly: true,
-      // Cross-site in prod (client on Netlify, API elsewhere) needs SameSite=None+Secure.
-      sameSite: isProd ? 'none' : 'lax',
+      // SPA + API are served same-origin (both behind benmanley.biz via Caddy),
+      // so Lax is safe and stronger than None. secure:true requires HTTPS,
+      // which Cloudflare provides in production.
+      sameSite: 'lax',
       secure: isProd,
       maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days
     },

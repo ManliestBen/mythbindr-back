@@ -39,14 +39,14 @@ npm start          # node dist/index.js
 ```
 
 - Node 20+ recommended.
-- Keep it alive with **pm2** (`pm2 start dist/index.js --name mythbindr-back`)
-  or a **systemd** service.
+- **Docker is the supported deploy path.** See `docs/deploy/` for the full
+  Raspberry Pi + Cloudflare Tunnel + Caddy setup. `docker compose up -d --build`
+  runs the API with auto-restart and graceful shutdown.
 - Production `.env`: `NODE_ENV=production`, `MONGODB_URI`, `SESSION_SECRET`,
-  `CLIENT_ORIGIN=https://<your-netlify-domain>`, and `RP_ID` / `RP_ORIGIN` set
-  to the **client** domain (where the passkey ceremony runs).
-- Put it behind a reverse proxy (Caddy/Nginx) with TLS, or expose it via the
-  Netlify `/api` proxy. Cross-site session cookies need `SameSite=None; Secure`
-  (already handled when `NODE_ENV=production`).
+  `CLIENT_ORIGIN=https://mythbindr.benmanley.biz`, and `RP_ID` / `RP_ORIGIN` set
+  to the subdomain where the passkey ceremony runs (the SPA's origin).
+- The SPA and API are served **same-origin** behind Caddy, so session cookies
+  use `SameSite=Lax; Secure` (handled automatically when `NODE_ENV=production`).
 
 ## Endpoints
 

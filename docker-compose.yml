@@ -1,0 +1,74 @@
+# MythBindr API — production compose for the Raspberry Pi.
+#
+# The reverse proxy (Caddy) and Cloudflare Tunnel live in a SEPARATE stack and
+# reach this service over the shared external `edge` network by its name,
+# `mythbindr-api:4000`. See docs/deploy/cloudflare-caddy.md.
+#
+# Create the shared network once (idempotent):
+#   docker network create edge
+#
+# Then:  docker compose up -d --build
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: mythbindr-api:latest
+    container_name: mythbindr-api
+    restart: unless-stopped
+    init: true                 # tini reaps zombies & forwards SIGTERM for graceful shutdown
+    env_file:
+      - .env                   # NODE_ENV, PORT, MONGODB_URI, SESSION_SECRET, RP_*, SPOTIFY_*, ANTHROPIC_*
+    environment:
+      NODE_ENV: production
+      PORT: "4000"
+    expose:
+      - "4000"                 # reachable on the `edge` network only (not published to the host)
+    # Uncomment to hit the API directly from the Pi's LAN for debugging:
+    # ports:
+    #   - "4000:4000"
+    networks:
+      - edge
+    healthcheck:
+      # bookworm-slim has no curl/wget, so probe with the bundled node runtime.
+      test:
+        - CMD
+        - node
+        - -e
+        - "require('http').get('http://127.0.0.1:4000/api/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ── Optional: self-hosted MongoDB on the Pi ────────────────────────────
+  # Prefer MongoDB Atlas (free M0) for managed backups + less SD/SSD wear.
+  # To run Mongo locally instead, uncomment this service, add it to `depends_on`
+  # above, and set MONGODB_URI=mongodb://mongo:27017/mythbindr in .env.
+  #
+  # mongo:
+  #   image: mongo:7                 # arm64 image available
+  #   container_name: mythbindr-mongo
+  #   restart: unless-stopped
+  #   volumes:
+  #     - mongo-data:/data/db
+  #   networks:
+  #     - edge
+  #   healthcheck:
+  #     test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+  #     interval: 30s
+  #     timeout: 5s
+  #     retries: 3
+
+networks:
+  edge:
+    external: true
+
+# volumes:
+#   mongo-data:

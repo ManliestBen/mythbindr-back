@@ -44,8 +44,9 @@ Add these in the dashboard under **Settings → Redirect URIs**:
 > loopback IP for new apps; `http://localhost` redirect URIs are rejected. (Loopback HTTP
 > is the only non-HTTPS redirect Spotify allows.)
 >
-> The production URL points at the **backend** host (Render/Railway/Fly/VPS), since the
-> server handles the OAuth code exchange — see PLAN.md §8. Add it once you know the domain.
+> The production redirect URL is on your own domain (e.g.
+> `https://mythbindr.benmanley.biz/api/integrations/spotify/callback`) — the API handles the
+> OAuth code exchange, served same-origin behind Caddy (see `docs/deploy/`).
 
 ## 3. Required OAuth scopes
 
@@ -91,8 +92,8 @@ server** after editing `.env`.
 ## 6. Production checklist (at deploy)
 
 - [ ] Add the production redirect URI to the Spotify dashboard.
-- [ ] Set `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET` / `SPOTIFY_REDIRECT_URI` as server
-      env vars on the backend host (not Netlify).
+- [ ] Set `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET` / `SPOTIFY_REDIRECT_URI` in the
+      API's `.env` on the Pi (injected via `env_file`; see `docs/deploy/`).
 - [ ] If you expect more than 25 distinct Spotify users, request a **quota extension**
       (move the app out of Development Mode) in the dashboard — otherwise only allow-listed
       users can connect.

@@ -2,9 +2,9 @@ import http from 'http';
 import express, { type ErrorRequestHandler } from 'express';
 import cors from 'cors';
 import mongoose from 'mongoose';
-import { initRealtime } from './realtime/io';
+import { initRealtime, getIO } from './realtime/io';
 import { env } from './lib/env';
-import { connectToDatabase } from './lib/db';
+import { connectToDatabase, disconnectFromDatabase } from './lib/db';
 import { createSessionMiddleware } from './lib/session';
 import authRoutes from './auth/routes';
 import spotifyRoutes from './integrations/spotify/routes';
@@ -61,6 +61,44 @@ async function main(): Promise<void> {
   server.listen(env.port, () => {
     console.log(`✓ Server listening on http://localhost:${env.port}`);
   });
+
+  // ── Graceful shutdown ──────────────────────────────────────────────────
+  // Docker/systemd send SIGTERM on stop/restart. Stop accepting connections,
+  // drain Socket.IO clients, then close the DB. A timeout guards a hung close.
+  let shuttingDown = false;
+  const shutdown = (signal: string): void => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    console.log(`\n${signal} received — shutting down gracefully…`);
+
+    const forceExit = setTimeout(() => {
+      console.error('Graceful shutdown timed out — forcing exit');
+      process.exit(1);
+    }, 10_000);
+    forceExit.unref();
+
+    const finish = async (): Promise<void> => {
+      try {
+        await disconnectFromDatabase();
+        console.log('✓ Closed server and database connection');
+        process.exit(0);
+      } catch (err) {
+        console.error('Error during shutdown:', err);
+        process.exit(1);
+      }
+    };
+
+    const io = getIO();
+    if (io) {
+      // io.close() also closes the underlying HTTP server once clients drain.
+      io.close(() => void finish());
+    } else {
+      server.close(() => void finish());
+    }
+  };
+
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
 }
 
 main().catch((err) => {

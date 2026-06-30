@@ -1,0 +1,26 @@
+# Build context exclusions — keep the image small and secrets out.
+node_modules
+dist
+*.tsbuildinfo
+
+# Secrets & local env (injected at runtime via env_file, never baked in)
+.env
+.env.*
+!.env.example
+
+# Git / CI
+.git
+.gitignore
+.github
+
+# Docs & editor
+docs
+README.md
+*.md
+.idea
+.vscode
+
+# Logs / OS
+*.log
+npm-debug.log*
+.DS_Store
